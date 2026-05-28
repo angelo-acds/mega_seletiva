@@ -1,37 +1,19 @@
 const prisma = require("../database/connect");
 const bcrypt = require("bcrypt");
 
-const validarRGA = (rga) => /^\d{12}$/.test(rga);
-const validarEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const saltRounds = 10;
 
 const DiretorModel = {
-  // 1. Cadastro do Diretor (Com senha criptografada)
+  // 1. CADASTRO: Criptografa a senha antes de salvar no PostgreSQL
   async criar(dados) {
     const { nome, rga, email, login, senha, funcoes } = dados;
 
     if (!nome || !rga || !email || !login || !senha) {
-      throw new Error("Todos os campos obrigatórios devem ser preenchidos.");
+      throw new Error("Todos os campos de cadastro do Diretor são obrigatórios.");
     }
 
-    if (!validarRGA(rga)) {
-      throw new Error("O RGA do diretor deve conter exatamente 12 dígitos numéricos.");
-    }
-
-    if (!validarEmail(email)) {
-      throw new Error("Formato de e-mail inválido.");
-    }
-
-    if (senha.length < 6) {
-      throw new Error("A senha do diretor deve ter pelo menos 6 caracteres.");
-    }
-
-    if (!funcoes || !Array.isArray(funcoes) || funcoes.length === 0) {
-      throw new Error("O diretor deve possuir pelo menos uma função selecionada.");
-    }
-
-    // Criptografia: Gera o hash da senha (fator de custo 10)
-    const salt = await bcrypt.genSalt(10);
-    const senhaCriptografada = await bcrypt.hash(senha, salt);
+    // Criptografia de senha para blindar o critério de segurança do edital
+    const senhaCriptografada = await bcrypt.hash(senha, saltRounds);
 
     return await prisma.diretor.create({
       data: {
@@ -39,41 +21,92 @@ const DiretorModel = {
         rga,
         email,
         login,
-        senha: senhaCriptografada, // Salva a senha protegida no Postgres
-        funcoes,
-      },
+        senha: senhaCriptografada,
+        funcoes // Array de funções ex: ['Designer', 'Supervisor', 'Front-End']
+      }
     });
   },
 
-  // 2. Lógica do Login (Para a nova tela do Patinho)
-  async autenticar(login, senha) {
-    if (!login || !senha) {
-      throw new Error("Login e senha são obrigatórios.");
-    }
+  // 2. LISTAGEM GERAL: Alinhada perfeitamente com a tela "LISTA DE DIRETOR"
+  async listarTodos() {
+    return await prisma.diretor.findMany({
+      select: {
+        id: true,
+        nome: true
+        // Não expõe email, login ou hash de senha na listagem pura por segurança
+      },
+      orderBy: { nome: "asc" }
+    });
+  },
 
-    // Busca o diretor pelo campo único 'login'
+  // 3. BUSCA INDIVIDUAL (inf. admin): Traz o RGA, as tags de Função e os Projetos Aceitos!
+  async buscarPorId(id) {
+    if (!id) throw new Error("O ID do diretor é obrigatório.");
+
     const diretor = await prisma.diretor.findUnique({
-      where: { login },
+      where: { id },
+      include: {
+        // Como o Diretor se aloca em projetos, trazemos suas alocações
+        alocacoes: {
+          include: {
+            projeto: true
+          }
+        }
+      }
     });
 
-    // Se não achar o usuário
-    if (!diretor) {
-      throw new Error("Usuário ou senha incorretos.");
-    }
+    if (!diretor) throw new Error("Diretor não encontrado.");
 
-    // Compara a senha digitada com o hash criptografado do banco
-    const senhaValida = await bcrypt.compare(senha, diretor.senha);
-
-    if (!senhaValida) {
-      throw new Error("Usuário ou senha incorretos.");
-    }
-
-    // Se deu tudo certo, retorna os dados do diretor (menos a senha por segurança)
-    const { senha: _, ...diretorLogado } = diretor;
+    // Mapeia os dados exatamente como a caixinha "inf. admin" quer exibir
     return {
-      mensagem: "Login efetuado com sucesso!",
-      diretor: diretorLogado
+      id: diretor.id,
+      nome: diretor.nome,
+      rga: diretor.rga,
+      funcoes: diretor.funcoes, // As badges coloridas da tela
+      projetosAceitos: diretor.alocacoes.map(aloc => ({
+        projetoId: aloc.projeto.id,
+        nome: aloc.projeto.nome
+      }))
     };
+  },
+
+  // 4. ATUALIZAÇÃO (EDITAR): Atende ao botão de editar (lápis) da lista
+  async atualizar(id, dados) {
+    const { nome, rga, email, login, senha, funcoes } = dados;
+
+    if (!id) throw new Error("O ID do diretor é obrigatório para atualização.");
+
+    const dadosAtualizados = { nome, rga, email, login, funcoes };
+
+    // Se o diretor alterou a senha na edição, criptografa a nova senha
+    if (senha) {
+      dadosAtualizados.senha = await bcrypt.hash(senha, saltRounds);
+    }
+
+    return await prisma.diretor.update({
+      where: { id },
+      data: dadosAtualizados
+    });
+  },
+
+  // 5. REMOÇÃO (DELETAR): Atende ao botão de lixeira da lista
+  async deletar(id) {
+    if (!id) throw new Error("O ID do diretor é obrigatório para exclusão.");
+
+    return await prisma.diretor.delete({
+      where: { id }
+    });
+  },
+
+  // 6. AUTENTICAÇÃO: Lógica auxiliar para a tela de Login que criamos antes
+  async verificarCredenciais(login, senha) {
+    const diretor = await prisma.diretor.findUnique({ where: { login } });
+    if (!diretor) return null;
+
+    const senhaValida = await bcrypt.compare(senha, diretor.senha);
+    if (!senhaValida) return null;
+
+    return diretor;
   }
 };
 
