@@ -33,35 +33,39 @@ model Projeto {
   alocacoes   Alocacao[]
 }
 
-// 3. Tabela Intermediária: Alocação
+// 3. Tabela Intermediária: Alocação (Ajustada com campos opcionais)
 model Alocacao {
-  id        String   @id @default(uuid())
+  id              String   @id @default(uuid())
   
-  // Quem é o membro e qual projeto
-  membroId  String
-  membro    Membro   @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  // Um membro comum OU um diretor pode ser alocado (Campos opcionais com '?')
+  membroId        String?
+  membro          Membro?  @relation(fields: [membroId], references: [id], onDelete: Cascade)
   
-  projetoId String
-  projeto   Projeto  @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+  diretorId       String?
+  diretor         Diretor? @relation(fields: [diretorId], references: [id], onDelete: Cascade)
+  
+  projetoId       String
+  projeto         Projeto  @relation(fields: [projetoId], references: [id], onDelete: Cascade)
 
-  // A REGRA: Apenas UMA função específica para este membro NESTE projeto
+  // A REGRA: Apenas UMA função específica neste projeto
   funcaoNoProjeto String 
+  createdAt       DateTime @default(now())
 
-  createdAt DateTime @default(now())
-
-  // Garante que o mesmo membro não seja alocado duas vezes no mesmo projeto
-  @@unique([membroId, projetoId]) 
+  // Índices únicos separados para garantir que ninguém seja duplicado no mesmo projeto
+  @@unique([membroId, projetoId])
+  @@unique([diretorId, projetoId])
 }
 
-// Adicione este modelo no final do seu arquivo schema.prisma existente
-
+// 4. Módulo de Diretor / Administrador
 model Diretor {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   nome      String
-  rga       String   @unique
-  email     String   @unique
-  login     String   @unique
-  senha     String   // No futuro vamos criptografar isso para segurança!
-  funcoes   String[] // Array para armazenar as funções marcadas nos checkboxes dele
-  createdAt DateTime @default(now())
+  rga       String     @unique // Adicionado @unique para validação correta do banco
+  email     String     @unique // Adicionado @unique para validação correta do banco
+  login     String     @unique
+  senha     String
+  funcoes   String[]   
+  createdAt DateTime   @default(now()) // Corrigido a sintaxe que estava com '// ...'
+
+  alocacoes Alocacao[] 
 }
