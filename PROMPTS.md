@@ -80,3 +80,73 @@ Análise Individual (Aceite/Recusa):Aceite Integral: Aceitei a sugestão. Salvar
 * **Análise Individual (Aceite/Recusa):**
   * **Aceite Crítico e Correção de Ambiente:** Aceitei as correções estruturais tornando os relacionamentos da tabela `Alocacao` opcionais (`membroId?` e `diretorId?`), permitindo que a mesma tabela sirva para alocar membros comuns ou diretores de forma independente. 
   * **Justificativa da Decisão:** Adicionei restrições de unicidade compostas (`@@unique`) para blindar o banco contra alocações duplicadas. Além disso, contornei o travamento do terminal utilizando comandos avançados do Git Bash (`grep` e `xargs`) para ignorar comentários do arquivo `.env` e forçar a injeção manual das chaves de acesso. Com isso, sincronizei com sucesso o schema físico no Supabase, garantindo um CRUD robusto e sem risco de dados órfãos através da regra `Cascade`.
+
+  ---
+
+## Registro 6: Arquitetura Modular de Rotas com Express Router
+
+### 1. Estratégia de Prompting
+* **Técnica Utilizada:** Integração de Componentes e Organização de Arquivos (Modularização).
+* **Prompt Enviado:** Envio da árvore de arquivos estruturada do VS Code contendo a pasta `routes` criada com sucesso e solicitação de início de implementação dos arquivos de rotas individuais.
+
+### 2. Resposta da IA e Tomada de Decisão
+* **Sugestão da IA:** A IA sugeriu a criação de um arquivo isolado para as rotas de Diretores utilizando o `express.Router()`, implementando o tratamento de erros HTTP (`try/catch`) e retornos com códigos de status semânticos (200, 201, 400, 401, 500).
+* **Análise Individual (Aceite/Recusa):**
+  * **Aceite Integral:** Aceitei o design de rotas proposto. Separar os arquivos de endpoints por recurso (Diretores, Membros, Projetos) evita que o arquivo principal `express.js` vire um monolito confuso de milhares de linhas, facilitando a manutenção e futuras auditorias de código pela equipe avaliadora.
+
+  ---
+
+## Registro 7: Ajuste de Regra de Negócio na Tela "inf. projeto"
+
+### 1. Estratégia de Prompting
+* **Técnica Utilizada:** Refinamento de Requisitos Baseado em Alinhamento de Equipe.
+* **Prompt Enviado:** Modificação crítica do desenvolvedor alertando que a ação de exclusão na tela de `inf. projeto` corresponde à desalocação de um membro da equipe, e não à deleção do projeto completo.
+
+### 2. Resposta da IA e Tomada de Decisão
+* **Sugestão da IA:** A IA compreendeu o mapeamento visual correto e sugeriu a criação de um endpoint do tipo `DELETE` apontando diretamente para o ID da tabela intermediária `Alocacao`.
+* **Análise Individual (Aceite/Recusa):**
+  * **Aceite Integral com Ajuste Arquitetural:** Aceitei a estratégia e implementei a rota `/projetos/desalocar/:alocacaoId`. 
+  * **Justificativa da Decisão:** Essa abordagem protege a integridade dos dados, impedindo a destruição acidental de um projeto inteiro e garantindo que o botão de lixeira cumpra exatamente o papel visual desenhado pelo Designer: limpar o slot do membro dentro da sua respectiva equipe (Back, Front, etc.).
+
+  ---
+
+## Registro 8: Centralização Direta de Endpoints no Módulo Express
+
+### 1. Estratégia de Prompting
+* **Técnica Utilizada:** Refatoração de Arquitetura Baseada em Simplicidade (KISS - Keep It Simple, Stupid).
+* **Prompt Enviado:** Apresentação do arquivo estruturado `modules/express.js` aplicando o acoplamento direto das rotas modulares com os prefixos HTTP (`/membros`, `/projetos`, etc.).
+
+### 2. Resposta da IA e Tomada de Decisão
+* **Sugestão da IA:** A IA avaliou as duas abordagens (Roteador Centralizador vs. Vinculação Direta no Express) e validou que a vinculação direta traz mais transparência para o fluxo de middlewares do MVP.
+* **Análise Individual (Aceite/Recusa):**
+  * **Aceite Convictor:** Decidi seguir com a aplicação direta das rotas no arquivo central do Express.
+  * **Justificativa da Decisão:** Embora a criação de um roteador intermediário seja elegante, para o escopo atual do nosso MVP, injetar as rotas diretamente no `express.js` deixa o código mais explícito, facilita o debug visual de quais caminhos estão ativos e reduz o número de arquivos soltos no projeto, tornando a integração mais ágil para mim e para o meu parceiro do Front-end.
+
+---
+
+## Registro 9: Debug de Inconsistências via Análise Estática de Código (Copilot)
+
+### 1. Estratégia de Prompting
+* **Técnica Utilizada:** Auditoria Completa de Fluxo (Code Review Assistido).
+* **Prompt Enviado:** Solicitação de varredura geral na árvore de arquivos para validação de compatibilidade entre assinaturas de métodos nos Models e chamadas nas Rotas.
+
+### 2. Resposta da IA e Tomada de Decisão
+* **Sugestão da IA:** O assistente detectou três falhas de runtime (tempo de execução): incompatibilidade de nomes de métodos nos módulos de membros (`buscarPorId` vs `buscarDetalhado`) e dashboard (`obterDadosGerais` vs `obterMetricas`), além de um erro de referência de variável (`m` em vez de `membro`) no model de membros.
+* **Análise Individual (Aceite/Recusa):**
+  * **Aceite Integral e Correção Imediata:** Aceitei o diagnóstico do review e apliquei as correções nos arquivos apontados.
+  * **Justificativa da Decisão:** Sem essa validação cruzada, o servidor apresentaria telas de sucesso falsas (como o array vazio `[]` no navegador) mas sofreria crashes fatais assim que requisições reais do tipo POST ou GET por ID fossem efetuadas. Alinhar as assinaturas de métodos blinda a esteira de integração do MVP.
+
+
+---
+
+## Registro 10: Fechamento de Escopo CRUD e Homologação de Rotas Restantes
+
+### 1. Estratégia de Prompting
+* **Técnica Utilizada:** Verificação de Cobertura de API (CRUD Compliance).
+* **Prompt Enviado:** Submissão do relatório final gerado pelo Copilot apontando a ausência física das rotas de deleção (`DELETE`) para as entidades de Membros e Projetos, apesar de seus respectivos modelos estarem prontos.
+
+### 2. Resposta da IA e Tomada de Decisão
+* **Sugestão da IA:** A IA recomendou a reinserção imediata das rotas de exclusão por ID em ambos os arquivos, garantindo conformidade estrita com o edital da Mega Jr.
+* **Análise Individual (Aceite/Recusa):**
+  * **Aceite Integral:** Implementei as rotas `DELETE /membros/:id` e `DELETE /projetos/:id`.
+  * **Justificativa da Decisão:** Embora a interface visual do MVP foque na desalocação de membros, deixar a API sem os endpoints de exclusão raiz violaria as especificações de um CRUD completo exigidas na folha de avaliação. Com essa adição, o backend atinge 100% de cobertura operacional, pronto para consumo estável pelo Frontend.

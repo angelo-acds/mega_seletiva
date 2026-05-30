@@ -4,7 +4,6 @@ const validarRGA = (rga) => /^\d{12}$/.test(rga);
 const validarEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 const MembroModel = {
-  // Mantemos o criar intacto
   async criar(dados) {
     const { name, email, rga, funcoes } = dados;
 
@@ -30,22 +29,20 @@ const MembroModel = {
     const membros = await prisma.membro.findMany({
       include: {
         _count: {
-          select: { alocacoes: true } // O Prisma conta quantos projetos o membro tem direto no banco
+          select: { alocacoes: true }
         }
       },
-      orderBy: { name: "asc" } // Organiza em ordem alfabética para a lista ficar bonita
+      orderBy: { name: "asc" }
     });
 
-    // Mapeia para um formato idêntico ao que a lista do Figma desenhou
-    return membros.map(m => ({
-      id: m.id,
-      name: m.name,
-      funcoesGerais: m.funcoes, // As tags de habilidades (ex: ['Back-End', 'Data Base'])
-      totalProjetos: m._count.alocacoes // O número da tag (05, 04, 02)
+    return membros.map(membro => ({
+      id: membro.id,
+      name: membro.name,
+      funcoesGerais: membro.funcoes,
+      totalProjetos: membro._count.alocacoes
     }));
   },
 
-  // 2. INTELIGÊNCIA DA TELA INDIVIDUAL (inf. membros): Traz os projetos aceitos e as funções deles
   async buscarDetalhado(id) {
     if (!id) throw new Error("O ID do membro é obrigatório.");
 
@@ -54,7 +51,7 @@ const MembroModel = {
       include: {
         alocacoes: {
           include: {
-            projeto: true // Inclui os dados reais do projeto (nome)
+            projeto: true
           }
         }
       }
@@ -62,16 +59,43 @@ const MembroModel = {
 
     if (!membro) throw new Error("Membro não encontrado.");
 
-    // Estrutura os dados limpinhos para a tela de "Projetos aceitos"
     return {
-      name: m.name,
-      rga: m.rga,
-      email: m.email,
+      name: membro.name,
+      rga: membro.rga,
+      email: membro.email,
       projetosAceitos: membro.alocacoes.map(alocacao => ({
         projetoNome: alocacao.projeto.nome,
-        funcaoNesseProjeto: alocacao.funcaoNoProjeto // A tag colorida ao lado do projeto!
+        funcaoNesseProjeto: alocacao.funcaoNoProjeto
       }))
     };
+  },
+
+  async atualizar(id, dados) {
+    if (!id) throw new Error("O ID do membro é obrigatório para atualização.");
+    const { name, email, rga, funcoes } = dados;
+
+    if (!name || !email || !rga || !funcoes) {
+      throw new Error("Todos os campos são obrigatórios para atualização.");
+    }
+    if (!validarRGA(rga)) {
+      throw new Error("O RGA deve conter exatamente 12 dígitos numéricos.");
+    }
+    if (!validarEmail(email)) {
+      throw new Error("Formato de e-mail inválido.");
+    }
+
+    return await prisma.membro.update({
+      where: { id },
+      data: { name, email, rga, funcoes },
+    });
+  },
+
+  async deletar(id) {
+    if (!id) throw new Error("O ID do membro é obrigatório para exclusão.");
+    
+    return await prisma.membro.delete({
+      where: { id },
+    });
   }
 };
 
