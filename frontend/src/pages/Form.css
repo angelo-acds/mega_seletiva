@@ -1,0 +1,231 @@
+.form-page {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.form-page__header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.form-page__titulo {
+  font-family: var(--font-titulo);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--branco);
+}
+
+.form-card {
+  background: var(--preto-card);
+  border-radius: 20px;
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-grupo--full {
+  grid-column: 1 / -1;
+}
+
+.form-label {
+  font-family: var(--font-titulo);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.5);
+}
+
+.form-input {
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 13px 16px;
+  font-size: 15px;
+  color: var(--branco);
+  outline: none;
+  font-family: var(--font-corpo);
+  transition: border-color var(--transition);
+  width: 100%;
+}
+
+.form-input:focus {
+  border-color: var(--roxo-claro);
+}
+
+.form-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.form-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--branco);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), transform var(--transition);
+}
+
+.form-checkbox-label:hover {
+  background: rgba(133, 94, 255, 0.12);
+  border-color: rgba(133, 94, 255, 0.35);
+}
+
+.form-checkbox-label input[type="checkbox"] {
+  accent-color: var(--roxo-claro);
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.form-checkbox-label input[type="checkbox"]:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.35);
+  outline-offset: 2px;
+}
+
+.form-input::placeholder {
+  color: rgba(255,255,255,0.25);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-select {
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+.form-select option {
+  background: #1f1f35;
+  color: #fff;
+}
+
+.form-secao {
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-secao__titulo {
+  font-family: var(--font-titulo);
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.6);
+}
+
+.form-erro {
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.form-acoes {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.btn-secundario {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.7);
+  padding: 13px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-corpo);
+  transition: background var(--transition);
+}
+
+.btn-secundario:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+
+/* Add/remove slot buttons in project allocation */
+.btn-add-slot,
+.btn-remove-slot {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.form-helper {
+  color: rgba(255,255,255,0.55);
+  font-size: 13px;
+  margin-top: 4px;
+  grid-column: 1 / -1;
+}
+
+.btn-add-slot {
+  background: #10B981; /* green */
+  color: #fff;
+}
+
+.btn-add-slot:hover {
+  filter: brightness(0.95);
+}
+
+.btn-remove-slot {
+  background: #EF4444; /* red */
+  color: #fff;
+}
+
+.btn-remove-slot:hover {
+  filter: brightness(0.95);
+}
+
+.slot-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}

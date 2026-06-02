@@ -1,0 +1,271 @@
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { TbArrowLeft } from 'react-icons/tb'
+import PageLayout from '../components/PageLayout'
+import { loadData, saveData, getNextId, defaultMembros, defaultProjetos, defaultDiretores } from '../services/localData'
+import './Form.css'
+
+const FUNCOES = ['Back-end', 'Front-end', 'Designer', 'DataBase', 'Mobile', 'Gerente de Projeto']
+const STATUS_OPCOES = ['Criado', 'Em progresso', 'Concluído']
+
+const getStacks = (person) => Array.isArray(person.stacks) && person.stacks.length > 0 ? person.stacks : [person.funcao]
+
+function CadastroProjeto() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const editando = Boolean(id)
+
+  const [form, setForm] = useState({
+    nome: '',
+    descricao: '',
+    status: 'Criado',
+    dataLimite: '',
+  })
+  const [alocacao, setAlocacao] = useState({}) // { funcao: membroId }
+  const [membros, setMembros] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [erro, setErro] = useState('')
+
+  useEffect(() => {
+    carregarMembros()
+    if (editando) carregarProjeto()
+  }, [id])
+
+  async function carregarMembros() {
+    try {
+      const membrosData = loadData('membros', defaultMembros)
+      const diretoresData = loadData('diretores', defaultDiretores)
+      const pessoas = [
+        ...membrosData,
+        ...diretoresData.map((d) => ({ ...d, isDiretor: true })),
+      ]
+      setMembros(pessoas)
+    } catch { /* silencioso */ }
+  }
+
+  async function carregarProjeto() {
+    try {
+      const projetos = loadData('projetos', defaultProjetos)
+      const projeto = projetos.find((p) => p.id === Number(id))
+      if (projeto) {
+        setForm({ nome: projeto.nome, descricao: projeto.descricao || '', status: projeto.status, dataLimite: projeto.dataLimite || '' })
+        // Normalize alocacao so each funcao is an array of member ids
+        const normalized = {}
+        ;(projeto.alocacao || {}) && FUNCOES.forEach((f) => {
+          const v = projeto.alocacao[f]
+          if (!v) normalized[f] = []
+          else if (Array.isArray(v)) normalized[f] = v.map((x) => Number(x))
+          else normalized[f] = [Number(v)]
+        })
+        setAlocacao(normalized)
+      }
+    } catch { /* silencioso */ }
+  }
+
+  const handleChange = (e) =>
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+
+  const handleAlocacao = (funcao, membroIds) =>
+    setAlocacao((prev) => ({ ...prev, [funcao]: membroIds }))
+
+  const handleSlotChange = (funcao, index, memberId) => {
+    setAlocacao((prev) => {
+      const arr = prev[funcao] ? [...prev[funcao]] : []
+      arr[index] = memberId ? Number(memberId) : null
+      return { ...prev, [funcao]: arr }
+    })
+  }
+
+  const addSlot = (funcao) => {
+    setAlocacao((prev) => ({ ...prev, [funcao]: [...(prev[funcao] || []), null] }))
+  }
+
+  const removeSlot = (funcao, index) => {
+    setAlocacao((prev) => {
+      const arr = prev[funcao] ? [...prev[funcao]] : []
+      arr.splice(index, 1)
+      return { ...prev, [funcao]: arr }
+    })
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setErro('')
+
+    if (!form.nome.trim()) { setErro('O nome do projeto é obrigatório.'); return }
+    if (!form.dataLimite)  { setErro('Informe a data limite.'); return }
+
+    setLoading(true)
+    try {
+      const projetos = loadData('projetos', defaultProjetos)
+      // Clean alocacao: ensure arrays with numeric ids, remove nulls
+      const cleanedAloc = Object.fromEntries(
+        Object.keys(alocacao).map((f) => {
+          const v = alocacao[f]
+          if (Array.isArray(v)) return [f, v.map((x) => Number(x)).filter(Boolean)]
+          if (v) return [f, [Number(v)]]
+          return [f, []]
+        })
+      )
+
+      const projetoPayload = {
+        nome: form.nome,
+        descricao: form.descricao,
+        status: form.status,
+        dataLimite: form.dataLimite,
+        alocacao: cleanedAloc,
+        // count total allocated members
+        membros: Object.values(cleanedAloc).reduce((acc, v) => acc + (Array.isArray(v) ? v.length : 0), 0),
+      }
+
+      let nextProjects
+      if (editando) {
+        nextProjects = projetos.map((p) => p.id === Number(id) ? { ...p, ...projetoPayload } : p)
+        saveData('projetos', nextProjects)
+      } else {
+        const novo = { id: getNextId(projetos), ...projetoPayload }
+        nextProjects = [...projetos, novo]
+        saveData('projetos', nextProjects)
+      }
+
+      // Recompute member project counts from all projects and save
+      try {
+        const membrosAtuais = loadData('membros', defaultMembros)
+        const counts = {}
+        nextProjects.forEach((p) => {
+          const al = p.alocacao || {}
+          Object.values(al).forEach((v) => {
+            if (Array.isArray(v)) v.forEach((mid) => { counts[Number(mid)] = (counts[Number(mid)] || 0) + 1 })
+            else if (v) counts[Number(v)] = (counts[Number(v)] || 0) + 1
+          })
+        })
+        const updatedMembros = membrosAtuais.map((m) => ({ ...m, projetos: counts[m.id] || 0 }))
+        saveData('membros', updatedMembros)
+        setMembros(updatedMembros)
+      } catch (err) {
+        // silencioso
+      }
+
+      navigate('/projetos')
+    } catch (err) {
+      setErro(err.response?.data?.message || 'Erro ao salvar projeto.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <PageLayout>
+      <div className="form-page">
+        <div className="form-page__header">
+          <button className="btn-voltar" onClick={() => navigate('/projetos')}>
+            <TbArrowLeft size={20} /> Voltar
+          </button>
+          <h1 className="form-page__titulo">
+            {editando ? 'Editar Projeto' : 'Novo Projeto'}
+          </h1>
+        </div>
+
+        <form className="form-card" onSubmit={handleSubmit}>
+          <div className="form-grid">
+            <div className="form-grupo form-grupo--full">
+              <label className="form-label">Nome do Projeto *</label>
+              <input
+                className="form-input"
+                name="nome"
+                value={form.nome}
+                onChange={handleChange}
+                placeholder="Ex: Sistema de Gestão"
+              />
+            </div>
+
+            <div className="form-grupo form-grupo--full">
+              <label className="form-label">Descrição</label>
+              <textarea
+                className="form-input form-textarea"
+                name="descricao"
+                value={form.descricao}
+                onChange={handleChange}
+                placeholder="Descreva o projeto..."
+                rows={4}
+              />
+            </div>
+
+            <div className="form-grupo">
+              <label className="form-label">Status</label>
+              <select className="form-input form-select" name="status" value={form.status} onChange={handleChange}>
+                {STATUS_OPCOES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
+            <div className="form-grupo">
+              <label className="form-label">Data Limite *</label>
+              <input
+                className="form-input"
+                type="date"
+                name="dataLimite"
+                value={form.dataLimite}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* Alocação de membros por função */}
+          <div className="form-secao">
+            <h2 className="form-secao__titulo">Alocação de Membros</h2>
+            <div className="form-grid">
+              {FUNCOES.map((funcao) => {
+                const disponiveis = membros.filter((m) => getStacks(m).includes(funcao))
+                const slots = (alocacao[funcao] && alocacao[funcao].length > 0) ? alocacao[funcao] : [null]
+                return (
+                  <div key={funcao} className="form-grupo">
+                    <label className="form-label">{funcao}</label>
+                    {slots.map((sel, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                        <select
+                          className="form-input form-select"
+                          value={sel ?? ''}
+                          onChange={(e) => handleSlotChange(funcao, idx, e.target.value)}
+                        >
+                          <option value="">— Nenhum —</option>
+                          {disponiveis.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.nome}{m.isDiretor ? ' (Diretor)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="slot-controls">
+                          <button type="button" className="btn-add-slot" onClick={() => addSlot(funcao)} title="Adicionar">
+                            +
+                          </button>
+                          {slots.length > 1 && (
+                            <button type="button" className="btn-remove-slot" onClick={() => removeSlot(funcao, idx)} title="Remover">
+                              –
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {erro && <p className="form-erro">{erro}</p>}
+
+          <div className="form-acoes">
+            <button type="button" className="btn-secundario" onClick={() => navigate('/projetos')}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn-primario" disabled={loading}>
+              {loading ? 'Salvando...' : editando ? 'Salvar Alterações' : 'Criar Projeto'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </PageLayout>
+  )
+}
+
+export default CadastroProjeto

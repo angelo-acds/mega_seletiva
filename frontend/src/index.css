@@ -1,0 +1,74 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Cores do Figma */
+  --roxo-profundo:  #1A1A2E;
+  --roxo-principal: #5B21B6;
+  --roxo-botao:     #784BFF;
+  --roxo-claro:     #A78BFA;
+  --preto-card:     #111111;
+  --cinza-sidebar:  #4B5563;
+  --branco:         #FFFFFF;
+
+  /* Utilitários */
+  --borda-sutil:    rgba(255, 255, 255, 0.12);
+  --borda-hover:    rgba(167, 139, 250, 0.6);
+  --danger:         #F87171;
+  --success:        #10B981;
+  --warning:        #F59E0B;
+
+  /* Tipografia */
+  --font-titulo: 'Montserrat', sans-serif;
+  --font-corpo:  'Inter', sans-serif;
+
+  /* Transições */
+  --transition: 0.2s ease;
+}
+
+html, body, #root {
+  min-height: 100vh;
+}
+
+body {
+  background-color: var(--roxo-profundo);
+  color: var(--branco);
+  font-family: var(--font-corpo);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  color: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Scrollbar customizada */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(167, 139, 250, 0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(167, 139, 250, 0.6);
+}

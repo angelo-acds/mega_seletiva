@@ -1,0 +1,183 @@
+/* ── Shared page layout ─────────────────────────── */
+.list-page {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.list-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.list-page__titulo {
+  font-family: var(--font-titulo);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--branco);
+}
+
+.list-page__loading {
+  color: rgba(255,255,255,0.5);
+  font-size: 16px;
+}
+
+/* ── Busca ─────────────────────────────────────── */
+.list-page__busca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--preto-card);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 12px 18px;
+  max-width: 480px;
+  transition: border-color var(--transition);
+}
+
+.list-page__busca:focus-within {
+  border-color: var(--roxo-claro);
+}
+
+.busca__icone {
+  color: rgba(255,255,255,0.4);
+  flex-shrink: 0;
+}
+
+.busca__input {
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: var(--branco);
+  width: 100%;
+}
+
+.busca__input::placeholder {
+  color: rgba(255,255,255,0.35);
+}
+
+/* ── Botão primário ────────────────────────────── */
+.btn-primario {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--roxo-botao);
+  color: #fff;
+  padding: 13px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-corpo);
+  transition: opacity var(--transition), transform var(--transition);
+}
+
+.btn-primario:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+/* ── Tabela ────────────────────────────────────── */
+.tabela-wrapper {
+  background: var(--preto-card);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.tabela thead th {
+  font-family: var(--font-titulo);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.45);
+  padding: 18px 20px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.tabela tbody td {
+  padding: 18px 20px;
+  color: rgba(255,255,255,0.85);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  vertical-align: middle;
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabela__row {
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.tabela__row:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.tabela__nome {
+  font-weight: 600;
+  color: #fff !important;
+}
+
+.tabela__vazio {
+  text-align: center;
+  color: rgba(255,255,255,0.35) !important;
+  padding: 48px !important;
+}
+
+/* ── Badge de status ───────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-titulo);
+  white-space: nowrap;
+}
+
+.badge-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ── Botões de ação ────────────────────────────── */
+.tabela__acoes {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  transition: background var(--transition), color var(--transition);
+}
+
+.btn-icone--editar {
+  color: var(--roxo-claro);
+}
+.btn-icone--editar:hover {
+  background: rgba(167,139,250,0.15);
+}
+
+.btn-icone--deletar {
+  color: var(--danger);
+}
+.btn-icone--deletar:hover {
+  background: rgba(248,113,113,0.15);
+}

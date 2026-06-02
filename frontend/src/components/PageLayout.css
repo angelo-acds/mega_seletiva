@@ -1,0 +1,12 @@
+.page-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--roxo-profundo);
+}
+
+.page-layout__main {
+  flex: 1;
+  padding: 40px 44px;
+  overflow-y: auto;
+  min-height: 100vh;
+}

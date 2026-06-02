@@ -1,0 +1,125 @@
+.dashboard__titulo {
+  font-family: var(--font-titulo);
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 32px;
+  color: var(--branco);
+}
+
+.dashboard__loading {
+  color: rgba(255,255,255,0.5);
+  font-size: 16px;
+}
+
+.dashboard__grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.dashboard__coluna-direita {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.dashboard__card {
+  background: var(--preto-card);
+  border-radius: 24px;
+  padding: 28px 28px 32px;
+}
+
+.dashboard__card--lista {
+  min-height: 520px;
+}
+
+.dashboard__card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.dashboard__card-icone {
+  font-size: 26px;
+}
+
+.dashboard__card-titulo {
+  font-family: var(--font-titulo);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--branco);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 20px;
+}
+
+.dashboard__card-header .dashboard__card-titulo {
+  margin-bottom: 0;
+}
+
+.dashboard__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* Stat Card */
+.stat-card {
+  background: #d9d9d9;
+  border-radius: 16px;
+  padding: 20px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-card__numero {
+  font-family: var(--font-titulo);
+  font-size: 64px;
+  font-weight: 900;
+  color: #111;
+  line-height: 1;
+}
+
+.stat-card__label {
+  font-family: var(--font-titulo);
+  font-size: 14px;
+  font-weight: 800;
+  color: #111;
+  text-transform: uppercase;
+}
+
+/* Lista de projetos */
+.lista-projetos {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lista-projetos__item {
+  font-family: var(--font-titulo);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--branco);
+  padding: 14px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background var(--transition);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lista-projetos__item:hover {
+  background: rgba(255,255,255,0.07);
+}
+
+@media (max-width: 1024px) {
+  .dashboard__grid {
+    grid-template-columns: 1fr;
+  }
+}
