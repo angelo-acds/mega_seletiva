@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// 1. Cadastro de Membros geral (O que fizemos na tela anterior)
+model Membro {
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  rga       String     @unique
+  funcoes   String[]   // Todas as habilidades dele (Back-End, Designer, etc.)
+  createdAt DateTime   @default(now())
+  
+  // Relacionamento: Um membro pode estar em várias alocações
+  alocacoes Alocacao[]
+}
+
+// 2. Cadastro de Projetos (Pronto para a sua próxima tela do Figma!)
+model Projeto {
+  id          String     @id @default(uuid())
+  nome        String
+  descricao   String?
+  status      String     @default("Criado") // Valores possíveis: "Criado", "Em Progresso", "Concluido"
+  dataLimite  DateTime?
+  createdAt   DateTime   @default(now())
+
+  alocacoes   Alocacao[]
+}
+
+// 3. Tabela Intermediária: Alocação (Ajustada com campos opcionais)
+model Alocacao {
+  id              String   @id @default(uuid())
+  
+  // Um membro comum OU um diretor pode ser alocado (Campos opcionais com '?')
+  membroId        String?
+  membro          Membro?  @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  
+  diretorId       String?
+  diretor         Diretor? @relation(fields: [diretorId], references: [id], onDelete: Cascade)
+  
+  projetoId       String
+  projeto         Projeto  @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+
+  // A REGRA: Apenas UMA função específica neste projeto
+  funcaoNoProjeto String 
+  createdAt       DateTime @default(now())
+
+  // Índices únicos separados para garantir que ninguém seja duplicado no mesmo projeto
+  @@unique([membroId, projetoId])
+  @@unique([diretorId, projetoId])
+}
+
+// 4. Módulo de Diretor / Administrador
+model Diretor {
+  id        String     @id @default(uuid())
+  nome      String
+  rga       String     @unique // Adicionado @unique para validação correta do banco
+  email     String     @unique // Adicionado @unique para validação correta do banco
+  login     String     @unique
+  senha     String
+  funcoes   String[]   
+  createdAt DateTime   @default(now()) // Corrigido a sintaxe que estava com '// ...'
+
+  alocacoes Alocacao[] 
+}
