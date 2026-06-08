@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "name": "mega-jr-frontend",
   "private": true,
   "version": "0.1.0",
@@ -19,27 +18,5 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.0"
-=======
-  "name": "curso-de-node",
-  "version": "1.0.0",
-  "description": "curso",
-  "license": "ISC",
-  "author": "",
-  "type": "commonjs",
-  "main": "index.js",
-  "scripts": {
-    "start:dev": "nodemon index.js"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.14",
-    "prisma": "^6.19.3"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.19.3",
-    "bcrypt": "^6.0.0",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1"
->>>>>>> a34d04bc214390aea8759474ce3e691dc936a44c
   }
 }
