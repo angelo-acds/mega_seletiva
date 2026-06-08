@@ -7,11 +7,16 @@ const DashboardModel = {
       select: { nome: true, status: true }
     });
 
-    // Contagem de status dos projetos usando JavaScript clássico
     const contagemProjetos = {
-      criados: todosProjetos.filter(p => p.status === "Criado").length,
-      emProgresso: todosProjetos.filter(p => p.status === "Em Progresso").length,
-      concluidos: todosProjetos.filter(p => p.status === "Concluido").length,
+      criados: todosProjetos.filter((p) => String(p.status || '').toLowerCase() === "criado").length,
+      emProgresso: todosProjetos.filter((p) => {
+        const status = String(p.status || '').toLowerCase();
+        return status.includes('em progresso');
+      }).length,
+      concluidos: todosProjetos.filter((p) => {
+        const status = String(p.status || '').toLowerCase();
+        return status.includes('concluido') || status.includes('concluído');
+      }).length,
     };
 
     // 2. Busca o total de membros cadastrados
@@ -30,7 +35,7 @@ const DashboardModel = {
       listaProjetos: todosProjetos.map(p => p.nome), // Preenche a "LISTA DE PROJETOS" da esquerda
       projetos: {
         criados: contagemProjetos.criados,
-        progresso: contagemProjetos.emProgresso,
+        emProgresso: contagemProjetos.emProgresso,
         concluidos: contagemProjetos.concluidos
       },
       desenvolvedores: {

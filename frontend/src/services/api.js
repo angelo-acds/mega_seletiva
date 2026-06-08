@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3333',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -26,7 +26,7 @@ api.interceptors.response.use(
 
 /* ─── Auth ─────────────────────────────────────────────── */
 export const authService = {
-  login: (credentials) => api.post('/auth/login', credentials),
+  login: (credentials) => api.post('/diretores/login', credentials),
   logout: () => localStorage.removeItem('token'),
 }
 

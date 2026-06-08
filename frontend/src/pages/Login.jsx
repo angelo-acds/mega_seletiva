@@ -25,12 +25,12 @@ function Login() {
 
     setLoading(true)
     try {
-      // TODO: integrar com o backend real
-      // const { data } = await authService.login(form)
-      // localStorage.setItem('token', data.token)
+      const { data } = await authService.login(form)
+      localStorage.setItem('diretor', JSON.stringify(data.diretor))
+      localStorage.setItem('token', data.token || '')
       navigate('/dashboard')
     } catch (err) {
-      setErro(err.response?.data?.message || 'Credenciais inválidas.')
+      setErro(err.response?.data?.error || 'Credenciais inválidas.')
     } finally {
       setLoading(false)
     }

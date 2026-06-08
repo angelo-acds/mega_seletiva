@@ -3,20 +3,27 @@ const prisma = require("../database/connect");
 const ProjetoModel = {
   // 1. LISTAGEM GERAL: Alinhada com a tela "Lista de Projetos"
   async listarTodos() {
-    return await prisma.projeto.findMany({
-      select: {
-        id: true,
-        nome: true,
-        status: true,
-        dataLimite: true
+    const projetos = await prisma.projeto.findMany({
+      include: {
+        _count: {
+          select: { alocacoes: true }
+        }
       },
       orderBy: { createdAt: "desc" }
     });
+
+    return projetos.map((projeto) => ({
+      id: projeto.id,
+      nome: projeto.nome,
+      status: projeto.status,
+      dataLimite: projeto.dataLimite,
+      membros: projeto._count.alocacoes,
+    }));
   },
 
   // 2. CADASTRO COMPLETO: Cria o projeto e faz a alocação inicial transacional
   async criar(dados) {
-    const { nome, descricao, dataLimite, alocacoes } = dados;
+    const { nome, descricao, status = "Criado", dataLimite, alocacoes } = dados;
 
     if (!nome) {
       throw new Error("O nome do projeto é obrigatório.");
@@ -27,8 +34,8 @@ const ProjetoModel = {
         data: {
           nome,
           descricao,
+          status,
           dataLimite: dataLimite ? new Date(dataLimite) : null,
-          status: "Criado"
         }
       });
 
@@ -69,7 +76,6 @@ const ProjetoModel = {
       throw new Error("Projeto não encontrado.");
     }
 
-    // Estrutura inicial do mapeamento por equipes baseado no Figma
     const equipes = {
       "Back-End": [],
       "Front-End": [],
@@ -79,26 +85,30 @@ const ProjetoModel = {
       "Supervisor": []
     };
 
-    // Alimenta dinamicamente cada caixinha da tela
-    projeto.alocacoes.forEach(aloc => {
+    projeto.alocacoes.forEach((aloc) => {
       const funcao = aloc.funcaoNoProjeto;
       if (equipes[funcao]) {
         equipes[funcao].push({
           alocacaoId: aloc.id,
           membroId: aloc.membroId,
-          nome: aloc.membro.name
+          nome: aloc.membro?.name || null,
         });
       }
     });
 
-    // Devolve o projeto limpo com as equipes já separadas para o Frontend só renderizar
     return {
       id: projeto.id,
       nome: projeto.nome,
       descricao: projeto.descricao,
       status: projeto.status,
       dataLimite: projeto.dataLimite,
-      equipes
+      equipes,
+      alocacoes: projeto.alocacoes.map((aloc) => ({
+        id: aloc.id,
+        membroId: aloc.membroId,
+        nome: aloc.membro?.name || null,
+        funcaoNoProjeto: aloc.funcaoNoProjeto,
+      })),
     };
   },
 

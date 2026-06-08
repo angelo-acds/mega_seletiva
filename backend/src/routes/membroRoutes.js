@@ -6,16 +6,16 @@ const MembroModel = require("../models/membroModel");
 // POST http://localhost:8080/membros
 router.post("/", async (req, res) => {
   try {
-    const { name, email, rga, funcoes } = req.body;
+    const { nome, rga, funcao, stacks, email } = req.body;
+    const funcoes = Array.isArray(stacks) && stacks.length ? stacks : (funcao ? [funcao] : []);
 
-    if (!name || !email || !rga || !funcoes) {
-      return res.status(400).json({ error: "Todos os campos são obrigatórios." });
+    if (!nome || !rga || funcoes.length === 0) {
+      return res.status(400).json({ error: "Nome, RGA e Funções são obrigatórios." });
     }
     
-    const novoMembro = await MembroModel.criar({ name, email, rga, funcoes });
+    const novoMembro = await MembroModel.criar({ nome, rga, funcoes, email });
     return res.status(201).json(novoMembro);
   } catch (error) {
-    // Se o erro for de registro duplicado (RGA ou Email), o status 400 avisa o front direitinho
     return res.status(400).json({ error: error.message });
   }
 });
@@ -48,8 +48,8 @@ router.get("/:id", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, rga, funcoes } = req.body;
-    const membroAtualizado = await MembroModel.atualizar(id, { name, email, rga, funcoes });
+    const { nome, rga, funcao, stacks, email } = req.body;
+    const membroAtualizado = await MembroModel.atualizar(id, { nome, rga, funcao, stacks, email });
     return res.status(200).json({
       message: "Dados do membro atualizados com sucesso!",
       dados: membroAtualizado

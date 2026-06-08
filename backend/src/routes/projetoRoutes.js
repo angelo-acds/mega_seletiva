@@ -6,11 +6,27 @@ const prisma = require("../database/connect"); // Importando a conexão para rod
 // 1. ROTA DE CRIAÇÃO DE PROJETO (Alinhada com a tela "CADASTRO DE PROJETO")
 router.post("/", async (req, res) => {
   try {
-    const { nome, descricao, dataLimite, alocacoes } = req.body;
+    const { nome, descricao, status, dataLimite, alocacao } = req.body;
     if (!nome) {
       return res.status(400).json({ error: "O nome do projeto é obrigatório." });
     }
-    const novoProjeto = await ProjetoModel.criar({ nome, descricao, dataLimite, alocacoes });
+
+    const alocacoes = [];
+    if (alocacao && typeof alocacao === 'object') {
+      Object.entries(alocacao).forEach(([funcao, membros]) => {
+        if (Array.isArray(membros)) {
+          membros.forEach((membroId) => {
+            if (membroId) {
+              alocacoes.push({ membroId, funcaoNoProjeto: funcao });
+            }
+          });
+        } else if (membros) {
+          alocacoes.push({ membroId: membros, funcaoNoProjeto: funcao });
+        }
+      });
+    }
+
+    const novoProjeto = await ProjetoModel.criar({ nome, descricao, status, dataLimite, alocacoes });
     return res.status(201).json(novoProjeto);
   } catch (error) {
     return res.status(400).json({ error: error.message });
@@ -53,7 +69,51 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// 5. ROTA DE DESALOCAR MEMBRO (Botão da Lixeira ao lado do nome do membro na tela "inf. projeto")
+// 5. ROTA DE ALOCAR MEMBRO EM PROJETO
+// POST http://localhost:8080/projetos/:id/alocar
+router.post("/:id/alocar", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { membroId, funcaoNoProjeto } = req.body;
+
+    if (!membroId || !funcaoNoProjeto) {
+      return res.status(400).json({ error: "Membro e função são obrigatórios para a alocação." });
+    }
+
+    const alocacao = await prisma.alocacao.create({
+      data: {
+        projetoId: id,
+        membroId,
+        funcaoNoProjeto,
+      }
+    });
+
+    return res.status(201).json(alocacao);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+// 6. ROTA DE DESALOCAR MEMBRO POR PROJETO E MEMBRO
+// DELETE http://localhost:8080/projetos/:projetoId/alocar/:membroId
+router.delete("/:projetoId/alocar/:membroId", async (req, res) => {
+  try {
+    const { projetoId, membroId } = req.params;
+
+    await prisma.alocacao.deleteMany({
+      where: {
+        projetoId,
+        membroId,
+      }
+    });
+
+    return res.status(200).json({ message: "Membro desalocado com sucesso." });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+// 7. ROTA DE DESALOCAR MEMBRO (Botão da Lixeira ao lado do nome do membro na tela "inf. projeto")
 // DELETE http://localhost:8080/projetos/desalocar/:alocacaoId
 router.delete("/desalocar/:alocacaoId", async (req, res) => {
   try {
