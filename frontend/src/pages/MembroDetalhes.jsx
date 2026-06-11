@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { TbPencil, TbArrowLeft, TbBrandAsana } from 'react-icons/tb'
 import PageLayout from '../components/PageLayout'
-import { loadData, defaultMembros, defaultProjetos } from '../services/localData'
+import { membrosService, projetosService } from '../services/api'
 import './Detalhes.css'
 
 const FUNCAO_COR = {
@@ -26,28 +26,30 @@ function MembroDetalhes() {
   async function carregar() {
     setLoading(true)
     try {
-      const membrosData = loadData('membros', defaultMembros)
-      const projetosData = loadData('projetos', defaultProjetos)
-      const encontrado = membrosData.find((m) => m.id === Number(id))
-      if (!encontrado) {
+      const [{ data: membroData }, { data: projetosData }] = await Promise.all([
+        membrosService.buscar(id),
+        projetosService.listar(),
+      ])
+
+      if (!membroData) {
         setMembro(null)
         setProjetosAlocados([])
         return
       }
 
-      const membroProjetos = []
-      projetosData.forEach((projeto) => {
-        const aloc = projeto.alocacao || {}
-        const alocados = Object.values(aloc).flatMap((item) =>
-          Array.isArray(item) ? item.map((mid) => Number(mid)) : item ? [Number(item)] : []
-        )
-        if (alocados.includes(Number(id))) {
-          membroProjetos.push({ id: projeto.id, nome: projeto.nome, status: projeto.status })
+      const membroProjetos = projetosData.filter((projeto) => {
+        const aloc = projeto.alocacoes || projeto.alocacao || []
+        if (Array.isArray(aloc)) {
+          return aloc.some((a) => String(a.membroId) === String(id) || String(a.diretorId) === String(id))
         }
-      })
+        // legacy object shape
+        return Object.values(aloc).flatMap((item) => Array.isArray(item) ? item : item ? [item] : []).some((mid) => String(mid) === String(id))
+      }).map((p) => ({ id: p.id, nome: p.nome, status: p.status }))
 
-      setMembro(encontrado)
+      setMembro(membroData)
       setProjetosAlocados(membroProjetos)
+    } catch (err) {
+      console.error('Erro ao carregar membro:', err)
     } finally {
       setLoading(false)
     }
@@ -56,7 +58,8 @@ function MembroDetalhes() {
   if (loading) return <PageLayout><p className="detalhes__loading">Carregando...</p></PageLayout>
   if (!membro) return <PageLayout><p className="detalhes__loading">Membro não encontrado.</p></PageLayout>
 
-  const cor = FUNCAO_COR[membro.funcao] || '#888'
+  const primaryFunc = (membro.stacks && membro.stacks.length > 0) ? membro.stacks[0] : membro.funcao
+  const cor = FUNCAO_COR[primaryFunc] || '#888'
 
   return (
     <PageLayout>
@@ -80,7 +83,7 @@ function MembroDetalhes() {
             <div className="detalhes__meta-item">
               <span className="detalhes__meta-label">Função</span>
               <span className="badge" style={{ background: cor + '22', color: cor, fontSize: 14, padding: '5px 14px', borderRadius: 99 }}>
-                {membro.funcao}
+                {primaryFunc}
               </span>
             </div>
             {membro.stacks?.length > 0 && (

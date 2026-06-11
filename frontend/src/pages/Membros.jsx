@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TbPlus, TbPencil, TbTrash, TbSearch, TbCheck, TbAlertTriangle, TbX } from 'react-icons/tb'
 import PageLayout from '../components/PageLayout'
-import { loadData, saveData, defaultMembros, defaultProjetos } from '../services/localData'
+import { membrosService } from '../services/api'
+import { loadData, saveData, defaultProjetos } from '../services/localData'
 import './ListPage.css'
 
 const FUNCAO_COR = {
@@ -26,7 +27,7 @@ function Membros() {
   async function carregar() {
     setLoading(true)
     try {
-      const membrosData = loadData('membros', defaultMembros)
+      const { data } = await membrosService.listar()
       const projetosData = loadData('projetos', defaultProjetos)
       setTotalProjetos(projetosData.length || 0)
 
@@ -48,9 +49,11 @@ function Membros() {
         })
       })
 
-      const updated = membrosData.map((m) => ({ ...m, projetos: counts[m.id] || 0 }))
-      saveData('membros', updated)
+      const updated = data.map((m) => ({ ...m, projetos: counts[m.id] || 0 }))
       setMembros(updated)
+    } catch (err) {
+      console.error('Erro ao carregar membros:', err)
+      alert('Não foi possível carregar os membros do servidor.')
     } finally {
       setLoading(false)
     }
@@ -87,17 +90,18 @@ function Membros() {
   async function deletar(id) {
     if (!confirm('Deseja remover este membro?')) return
     try {
+      await membrosService.deletar(id)
       const next = membros.filter((m) => m.id !== id)
-      saveData('membros', next)
       setMembros(next)
-    } catch {
+    } catch (err) {
+      console.error('Erro ao deletar membro:', err)
       alert('Erro ao remover membro.')
     }
   }
 
   const filtrados = membros.filter((m) =>
     m.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    m.funcao.toLowerCase().includes(busca.toLowerCase()) ||
+    ((m.stacks && m.stacks.length > 0 ? m.stacks[0] : (m.funcao || '')).toLowerCase()).includes(busca.toLowerCase()) ||
     (m.stacks || []).join(' ').toLowerCase().includes(busca.toLowerCase())
   )
 

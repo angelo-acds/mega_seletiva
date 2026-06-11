@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { TbArrowLeft } from 'react-icons/tb'
 import PageLayout from '../components/PageLayout'
-import { loadData, saveData, getNextId, defaultMembros } from '../services/localData'
+import { membrosService } from '../services/api'
 import './Form.css'
 
 const FUNCOES = ['Back-end', 'Front-end', 'Designer', 'DataBase', 'Mobile', 'Gerente de Projeto']
@@ -22,8 +22,7 @@ function CadastroMembro() {
 
   async function carregarMembro() {
     try {
-      const membros = loadData('membros', defaultMembros)
-      const membro = membros.find((m) => m.id === Number(id))
+      const { data: membro } = await membrosService.buscar(id)
       if (membro) {
         setForm({
           nome: membro.nome,
@@ -33,7 +32,9 @@ function CadastroMembro() {
           senha: '',
         })
       }
-    } catch { /* silencioso */ }
+    } catch (err) {
+      console.error('Erro ao carregar membro:', err)
+    }
   }
 
   const handleChange = (e) =>
@@ -59,6 +60,7 @@ function CadastroMembro() {
 
     if (!form.nome.trim())  { setErro('O nome é obrigatório.'); return }
     if (!form.rga.trim())   { setErro('O RGA é obrigatório.'); return }
+    if ((!form.stacks || form.stacks.length === 0)) { setErro('Selecione ao menos uma função (stack).'); return }
     if (!editando && !form.senha) { setErro('A senha é obrigatória.'); return }
 
     setLoading(true)
@@ -66,23 +68,19 @@ function CadastroMembro() {
       const payload = {
         nome: form.nome,
         rga: form.rga,
-        funcao: form.funcao,
         stacks: form.stacks && form.stacks.length > 0 ? form.stacks : [form.funcao],
       }
       if (form.senha) payload.senha = form.senha
 
-      const membros = loadData('membros', defaultMembros)
       if (editando) {
-        const updated = membros.map((m) => m.id === Number(id) ? { ...m, ...payload } : m)
-        saveData('membros', updated)
+        await membrosService.editar(id, payload)
       } else {
-        const novo = { id: getNextId(membros), ...payload, projetos: 0 }
-        saveData('membros', [...membros, novo])
+        await membrosService.criar(payload)
       }
 
       navigate('/membros')
     } catch (err) {
-      setErro(err.response?.data?.message || 'Erro ao salvar membro.')
+      setErro(err.response?.data?.error || 'Erro ao salvar membro.')
     } finally {
       setLoading(false)
     }
@@ -112,12 +110,7 @@ function CadastroMembro() {
               <input className="form-input" name="rga" value={form.rga} onChange={handleChange} placeholder="Ex: 202310001" />
             </div>
 
-            <div className="form-grupo">
-              <label className="form-label">Função *</label>
-              <select className="form-input form-select" name="funcao" value={form.funcao} onChange={handleChange}>
-                {FUNCOES.map((f) => <option key={f} value={f}>{f}</option>)}
-              </select>
-            </div>
+            {/* Função removed: using Stacks only */}
 
             <div className="form-grupo form-grupo--full">
               <label className="form-label">Stacks</label>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TbPlus, TbPencil, TbTrash, TbSearch } from 'react-icons/tb'
 import PageLayout from '../components/PageLayout'
-import { loadData, saveData, defaultProjetos } from '../services/localData'
+import { projetosService } from '../services/api'
 import './ListPage.css'
 
 const STATUS_COR = {
@@ -24,8 +24,11 @@ function Projetos() {
   async function carregar() {
     setLoading(true)
     try {
-      const data = loadData('projetos', defaultProjetos)
+      const { data } = await projetosService.listar()
       setProjetos(data)
+    } catch (err) {
+      console.error('Erro ao carregar projetos:', err)
+      alert('Não foi possível carregar os projetos do servidor.')
     } finally {
       setLoading(false)
     }
@@ -34,10 +37,11 @@ function Projetos() {
   async function deletar(id) {
     if (!confirm('Tem certeza que deseja remover este projeto?')) return
     try {
+      await projetosService.deletar(id)
       const next = projetos.filter((p) => p.id !== id)
-      saveData('projetos', next)
       setProjetos(next)
-    } catch {
+    } catch (err) {
+      console.error('Erro ao remover projeto:', err)
       alert('Erro ao remover projeto.')
     }
   }

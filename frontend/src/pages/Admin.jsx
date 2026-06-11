@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TbPlus, TbPencil, TbTrash, TbSearch } from 'react-icons/tb'
 import PageLayout from '../components/PageLayout'
-import { loadData, saveData, defaultDiretores } from '../services/localData'
+import { diretoresService } from '../services/api'
 import './ListPage.css'
 
 const FUNCAO_COR = {
@@ -25,8 +25,11 @@ function Admin() {
   async function carregar() {
     setLoading(true)
     try {
-      const data = loadData('diretores', defaultDiretores)
+      const { data } = await diretoresService.listar()
       setDiretores(data)
+    } catch (err) {
+      console.error('Erro ao carregar diretores:', err)
+      alert('Não foi possível carregar os diretores do servidor.')
     } finally {
       setLoading(false)
     }
@@ -35,10 +38,11 @@ function Admin() {
   async function deletar(id) {
     if (!confirm('Deseja remover este diretor?')) return
     try {
+      await diretoresService.deletar(id)
       const next = diretores.filter((d) => d.id !== id)
-      saveData('diretores', next)
       setDiretores(next)
-    } catch {
+    } catch (err) {
+      console.error('Erro ao deletar diretor:', err)
       alert('Erro ao remover diretor.')
     }
   }
@@ -95,7 +99,7 @@ function Admin() {
                       <td>{d.rga}</td>
                       <td>
                         <span className="badge" style={{ background: 'rgba(167,139,250,0.15)', color: 'var(--roxo-claro)' }}>
-                          {d.funcao}
+                          {(d.stacks && d.stacks.length > 0) ? d.stacks[0] : d.funcao}
                         </span>
                       </td>
                       <td>
