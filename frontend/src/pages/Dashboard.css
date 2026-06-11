@@ -123,3 +123,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Smaller screens: stack stats and reduce number sizes */
+@media (max-width: 600px) {
+  .dashboard__grid { gap: 12px; }
+  .dashboard__card { padding: 18px; border-radius: 16px; }
+  .dashboard__card--lista { min-height: 320px; }
+  .dashboard__stats { grid-template-columns: 1fr; }
+  .stat-card { padding: 12px; }
+  .stat-card__numero { font-size: 40px; }
+  .dashboard__titulo { font-size: 22px; margin-bottom: 18px; }
+  .dashboard__card-titulo { font-size: 16px; }
+  .lista-projetos__item { font-size: 15px; padding: 10px; }
+}

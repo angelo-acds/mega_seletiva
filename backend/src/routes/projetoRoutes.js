@@ -6,19 +6,22 @@ const prisma = require("../database/connect"); // Importando a conexão para rod
 // 1. ROTA DE CRIAÇÃO DE PROJETO (Alinhada com a tela "CADASTRO DE PROJETO")
 router.post("/", async (req, res) => {
   try {
-    const { nome, descricao, status, dataLimite, alocacao } = req.body;
+    const { nome, descricao, status, dataLimite } = req.body;
     if (!nome) {
       return res.status(400).json({ error: "O nome do projeto é obrigatório." });
     }
 
-    const alocacoes = [];
-    if (alocacao && typeof alocacao === 'object') {
-      Object.entries(alocacao).forEach(([funcao, membros]) => {
+    // aceitamos dois formatos vindos do frontend
+    // - alocacoes: array de { membroId?, diretorId?, funcaoNoProjeto }
+    // - alocacao: object { funcao: [ids] } (formato legado)
+    let alocacoes = [];
+    if (Array.isArray(req.body.alocacoes)) {
+      alocacoes = req.body.alocacoes.map((a) => ({ ...a }));
+    } else if (req.body.alocacao && typeof req.body.alocacao === 'object') {
+      Object.entries(req.body.alocacao).forEach(([funcao, membros]) => {
         if (Array.isArray(membros)) {
           membros.forEach((membroId) => {
-            if (membroId) {
-              alocacoes.push({ membroId, funcaoNoProjeto: funcao });
-            }
+            if (membroId) alocacoes.push({ membroId, funcaoNoProjeto: funcao });
           });
         } else if (membros) {
           alocacoes.push({ membroId: membros, funcaoNoProjeto: funcao });
@@ -59,11 +62,43 @@ router.get("/:id", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
+
+    const { alocacoes } = req.body;
+
+    if (Array.isArray(alocacoes)) {
+      // atualiza projeto e substitui alocações em transação
+      const updated = await prisma.$transaction(async (tx) => {
+        const projeto = await tx.projeto.update({
+          where: { id },
+          data: {
+            nome: req.body.nome,
+            descricao: req.body.descricao,
+            status: req.body.status,
+            dataLimite: req.body.dataLimite ? new Date(req.body.dataLimite) : undefined,
+          }
+        });
+
+        // remove todas as alocações existentes do projeto
+        await tx.alocacao.deleteMany({ where: { projetoId: id } });
+
+        const createData = alocacoes.map((a) => ({
+          projetoId: id,
+          membroId: a.membroId || null,
+          diretorId: a.diretorId || null,
+          funcaoNoProjeto: a.funcaoNoProjeto,
+        }));
+
+        if (createData.length) await tx.alocacao.createMany({ data: createData });
+
+        return projeto;
+      });
+
+      return res.status(200).json({ message: "Projeto atualizado com sucesso!", dados: updated });
+    }
+
+    // fallback: apenas atualiza campos do projeto
     const projetoAtualizado = await ProjetoModel.atualizar(id, req.body);
-    return res.status(200).json({
-      message: "Projeto atualizado com sucesso!",
-      dados: projetoAtualizado
-    });
+    return res.status(200).json({ message: "Projeto atualizado com sucesso!", dados: projetoAtualizado });
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }

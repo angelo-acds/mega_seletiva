@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { TbPencil, TbArrowLeft, TbUser } from 'react-icons/tb'
-import { loadData, defaultProjetos, defaultMembros, defaultDiretores } from '../services/localData'
+import { projetosService } from '../services/api'
 import PageLayout from '../components/PageLayout'
 import './Detalhes.css'
 
@@ -20,34 +20,23 @@ function ProjetoDetalhes() {
   async function carregar() {
     setLoading(true)
     try {
-      const projetos = loadData('projetos', defaultProjetos)
-      const encontrado = projetos.find((p) => p.id === Number(id))
-      if (encontrado) {
-        // Build members per function from saved alocacao (funcao -> membroId)
-        const membrosData = loadData('membros', defaultMembros)
-        const diretoresData = loadData('diretores', defaultDiretores)
-        const pessoasData = [
-          ...membrosData,
-          ...diretoresData.map((d) => ({ ...d, isDiretor: true })),
-        ]
-        const aloc = encontrado.alocacao || {}
-        const membrosPorFuncao = {}
-        FUNCOES.forEach((funcao) => {
-          const v = aloc[funcao]
-          if (!v) {
-            membrosPorFuncao[funcao] = []
-          } else if (Array.isArray(v)) {
-            membrosPorFuncao[funcao] = v.map((mid) => pessoasData.find((m) => m.id === Number(mid))).filter(Boolean)
-          } else {
-            const membro = pessoasData.find((m) => m.id === Number(v))
-            membrosPorFuncao[funcao] = membro ? [membro] : []
-          }
-        })
+      const { data } = await projetosService.buscar(id)
+      const membrosPorFuncao = {}
+      const aloc = data.alocacoes || []
+      FUNCOES.forEach((funcao) => {
+        membrosPorFuncao[funcao] = aloc
+          .filter((alocacao) => alocacao.funcaoNoProjeto === funcao)
+          .map((alocacao) => ({
+            id: alocacao.membroId,
+            nome: alocacao.nome,
+            isDiretor: false,
+          }))
+      })
 
-        setProjeto({ ...encontrado, membros: membrosPorFuncao })
-      } else {
-        setProjeto(null)
-      }
+      setProjeto({ ...data, membros: membrosPorFuncao })
+    } catch (err) {
+      console.error('Erro ao carregar projeto:', err)
+      setProjeto(null)
     } finally {
       setLoading(false)
     }

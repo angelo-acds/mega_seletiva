@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
-import { loadData, defaultProjetos, defaultMembros } from '../services/localData'
+import { dashboardService, projetosService } from '../services/api'
 import './Dashboard.css'
 
 function StatCard({ label, valor, cor }) {
@@ -28,28 +28,37 @@ function Dashboard() {
     return () => window.removeEventListener('focus', handleFocus)
   }, [])
 
-  function carregar() {
+  async function carregar() {
     setLoading(true)
-    const projetosAtuais = loadData('projetos', defaultProjetos)
-    const membrosAtuais = loadData('membros', defaultMembros)
+    try {
+      const [resResumo, resProjetos] = await Promise.all([
+        dashboardService.resumo(),
+        projetosService.listar(),
+      ])
 
-    const alocacoes = projetosAtuais.flatMap((projeto) => Object.values(projeto.alocacao || []).filter(Boolean))
-    const membrosTrabalhando = new Set(alocacoes).size
+      const resumo = resResumo.data
+      const projetosAtuais = resProjetos.data || []
 
-    setDados({
-      membros: {
-        cadastrados: membrosAtuais.length,
-        trabalhando: membrosTrabalhando,
-        esperando: Math.max(0, membrosAtuais.length - membrosTrabalhando),
-      },
-      projetos: {
-        criados: projetosAtuais.length,
-        emProgresso: projetosAtuais.filter((p) => p.status === 'Em progresso').length,
-        concluidos: projetosAtuais.filter((p) => p.status === 'Concluído').length,
-      },
-    })
-    setProjetos(projetosAtuais)
-    setLoading(false)
+      // normalize resumo to previous shape
+      setDados({
+        membros: {
+          cadastrados: resumo.desenvolvedores?.cadastrados ?? 0,
+          trabalhando: resumo.desenvolvedores?.trabalhando ?? 0,
+          esperando: resumo.desenvolvedores?.esperando ?? 0,
+        },
+        projetos: {
+          criados: resumo.projetos?.criados ?? (projetosAtuais.length),
+          emProgresso: resumo.projetos?.emProgresso ?? 0,
+          concluidos: resumo.projetos?.concluidos ?? 0,
+        }
+      })
+
+      setProjetos(projetosAtuais)
+    } catch (err) {
+      console.error('Erro ao carregar dashboard:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

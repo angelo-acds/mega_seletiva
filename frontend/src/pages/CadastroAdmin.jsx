@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { TbArrowLeft } from 'react-icons/tb'
 import PageLayout from '../components/PageLayout'
-import { loadData, saveData, getNextId, defaultDiretores } from '../services/localData'
+import { diretoresService } from '../services/api'
 import './Form.css'
 
 const CARGOS = [
@@ -30,8 +30,7 @@ function CadastroAdmin() {
 
   async function carregarDiretor() {
     try {
-      const diretores = loadData('diretores', defaultDiretores)
-      const diretor = diretores.find((d) => d.id === Number(id))
+      const { data: diretor } = await diretoresService.buscar(id)
       if (diretor) {
         setForm({
           nome: diretor.nome,
@@ -41,7 +40,9 @@ function CadastroAdmin() {
           senha: '',
         })
       }
-    } catch { /* silencioso */ }
+    } catch (err) {
+      console.error('Erro ao carregar diretor:', err)
+    }
   }
 
   const handleChange = (e) =>
@@ -79,18 +80,15 @@ function CadastroAdmin() {
       }
       if (form.senha) payload.senha = form.senha
 
-      const diretores = loadData('diretores', defaultDiretores)
       if (editando) {
-        const updated = diretores.map((d) => d.id === Number(id) ? { ...d, ...payload } : d)
-        saveData('diretores', updated)
+        await diretoresService.editar(id, payload)
       } else {
-        const novo = { id: getNextId(diretores), ...payload }
-        saveData('diretores', [...diretores, novo])
+        await diretoresService.criar(payload)
       }
 
       navigate('/admin')
     } catch (err) {
-      setErro(err.response?.data?.message || 'Erro ao salvar diretor.')
+      setErro(err.response?.data?.error || 'Erro ao salvar diretor.')
     } finally {
       setLoading(false)
     }

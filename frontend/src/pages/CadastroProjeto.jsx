@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { TbArrowLeft } from 'react-icons/tb'
 import PageLayout from '../components/PageLayout'
-import { loadData, saveData, getNextId, defaultMembros, defaultProjetos, defaultDiretores } from '../services/localData'
+import { projetosService, membrosService, diretoresService } from '../services/api'
 import './Form.css'
 
 const FUNCOES = ['Back-end', 'Front-end', 'Designer', 'DataBase', 'Mobile', 'Gerente de Projeto']
@@ -33,33 +33,37 @@ function CadastroProjeto() {
 
   async function carregarMembros() {
     try {
-      const membrosData = loadData('membros', defaultMembros)
-      const diretoresData = loadData('diretores', defaultDiretores)
+      const [{ data: membrosData }, { data: diretoresData }] = await Promise.all([
+        membrosService.listar(),
+        diretoresService.listar(),
+      ])
       const pessoas = [
         ...membrosData,
         ...diretoresData.map((d) => ({ ...d, isDiretor: true })),
       ]
       setMembros(pessoas)
-    } catch { /* silencioso */ }
+    } catch (err) {
+      console.error('Erro ao carregar membros e diretores:', err)
+    }
   }
 
   async function carregarProjeto() {
     try {
-      const projetos = loadData('projetos', defaultProjetos)
-      const projeto = projetos.find((p) => p.id === Number(id))
+      const { data: projeto } = await projetosService.buscar(id)
       if (projeto) {
-        setForm({ nome: projeto.nome, descricao: projeto.descricao || '', status: projeto.status, dataLimite: projeto.dataLimite || '' })
-        // Normalize alocacao so each funcao is an array of member ids
+        setForm({ nome: projeto.nome, descricao: projeto.descricao || '', status: projeto.status, dataLimite: projeto.dataLimite ? projeto.dataLimite.split('T')[0] : '' })
         const normalized = {}
-        ;(projeto.alocacao || {}) && FUNCOES.forEach((f) => {
-          const v = projeto.alocacao[f]
-          if (!v) normalized[f] = []
-          else if (Array.isArray(v)) normalized[f] = v.map((x) => Number(x))
-          else normalized[f] = [Number(v)]
+        FUNCOES.forEach((f) => {
+          // keep ids as strings (UUID) and include diretorId when present
+          normalized[f] = projeto.alocacoes
+            .filter((aloc) => aloc.funcaoNoProjeto === f)
+            .map((aloc) => (aloc.membroId || aloc.diretorId))
         })
         setAlocacao(normalized)
       }
-    } catch { /* silencioso */ }
+    } catch (err) {
+      console.error('Erro ao carregar projeto:', err)
+    }
   }
 
   const handleChange = (e) =>
@@ -71,7 +75,8 @@ function CadastroProjeto() {
   const handleSlotChange = (funcao, index, memberId) => {
     setAlocacao((prev) => {
       const arr = prev[funcao] ? [...prev[funcao]] : []
-      arr[index] = memberId ? Number(memberId) : null
+      // store the selected id as string (matches backend UUIDs)
+      arr[index] = memberId ? String(memberId) : null
       return { ...prev, [funcao]: arr }
     })
   }
@@ -97,58 +102,35 @@ function CadastroProjeto() {
 
     setLoading(true)
     try {
-      const projetos = loadData('projetos', defaultProjetos)
-      // Clean alocacao: ensure arrays with numeric ids, remove nulls
-      const cleanedAloc = Object.fromEntries(
-        Object.keys(alocacao).map((f) => {
-          const v = alocacao[f]
-          if (Array.isArray(v)) return [f, v.map((x) => Number(x)).filter(Boolean)]
-          if (v) return [f, [Number(v)]]
-          return [f, []]
-        })
+      const alocacoes = Object.entries(alocacao).flatMap(([funcao, membrosIds]) =>
+        (Array.isArray(membrosIds) ? membrosIds : [membrosIds]).
+          filter(Boolean).
+          map((selectedId) => {
+            const pessoa = membros.find((m) => String(m.id) === String(selectedId))
+            if (pessoa?.isDiretor) {
+              return { diretorId: selectedId, funcaoNoProjeto: funcao }
+            }
+            return { membroId: selectedId, funcaoNoProjeto: funcao }
+          })
       )
 
-      const projetoPayload = {
+      const payload = {
         nome: form.nome,
         descricao: form.descricao,
         status: form.status,
         dataLimite: form.dataLimite,
-        alocacao: cleanedAloc,
-        // count total allocated members
-        membros: Object.values(cleanedAloc).reduce((acc, v) => acc + (Array.isArray(v) ? v.length : 0), 0),
+        alocacoes,
       }
 
-      let nextProjects
       if (editando) {
-        nextProjects = projetos.map((p) => p.id === Number(id) ? { ...p, ...projetoPayload } : p)
-        saveData('projetos', nextProjects)
+        await projetosService.editar(id, payload)
       } else {
-        const novo = { id: getNextId(projetos), ...projetoPayload }
-        nextProjects = [...projetos, novo]
-        saveData('projetos', nextProjects)
-      }
-
-      // Recompute member project counts from all projects and save
-      try {
-        const membrosAtuais = loadData('membros', defaultMembros)
-        const counts = {}
-        nextProjects.forEach((p) => {
-          const al = p.alocacao || {}
-          Object.values(al).forEach((v) => {
-            if (Array.isArray(v)) v.forEach((mid) => { counts[Number(mid)] = (counts[Number(mid)] || 0) + 1 })
-            else if (v) counts[Number(v)] = (counts[Number(v)] || 0) + 1
-          })
-        })
-        const updatedMembros = membrosAtuais.map((m) => ({ ...m, projetos: counts[m.id] || 0 }))
-        saveData('membros', updatedMembros)
-        setMembros(updatedMembros)
-      } catch (err) {
-        // silencioso
+        await projetosService.criar(payload)
       }
 
       navigate('/projetos')
     } catch (err) {
-      setErro(err.response?.data?.message || 'Erro ao salvar projeto.')
+      setErro(err.response?.data?.error || 'Erro ao salvar projeto.')
     } finally {
       setLoading(false)
     }
