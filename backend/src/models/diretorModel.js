@@ -39,26 +39,33 @@ function gerarEmail(login, nome) {
 function normalizarFuncoes({ funcao, stacks, funcoes }) {
   if (Array.isArray(stacks) && stacks.length) return stacks;
   if (Array.isArray(funcoes) && funcoes.length) return funcoes;
-  if (funcao) return [funcao];
+  const cargosConhecidos = ["Diretor de Projetos", "Diretora de Pessoas", "Diretor Financeiro", "Diretor de Marketing", "Presidente"];
+  if (funcao && !cargosConhecidos.includes(funcao)) return [funcao];
   return [];
 }
 
 const DiretorModel = {
-  // 1. CADASTRO: Criptografa a senha antes de salvar no PostgreSQL
+  // 1. CADASTRO: Criptografa a senha e salva no Supabase dividindo Cargo de Stacks
   async criar(dados) {
     const nome = dados.nome || dados.name;
     const rga = dados.rga;
     const senha = dados.senha;
     const login = dados.login;
     const email = dados.email;
-    const funcoes = normalizarFuncoes(dados);
+    
+    const cargo = dados.funcao || dados.cargo; 
+    const funcoes = dados.stacks || normalizarFuncoes(dados);
 
     if (!nome || !rga || !senha) {
       throw new Error('Nome, RGA e senha são obrigatórios para cadastrar um diretor.');
     }
 
+    if (!cargo) {
+      throw new Error('O cargo corporativo (ex: Presidente, Diretor de Projetos) é obrigatório.');
+    }
+
     if (funcoes.length === 0) {
-      throw new Error('Selecione ao menos uma função para o diretor.');
+      throw new Error('Selecione ao menos uma função técnica/stack para o diretor.');
     }
 
     const finalLogin = login || await gerarLogin(nome);
@@ -72,19 +79,21 @@ const DiretorModel = {
         email: finalEmail,
         login: finalLogin,
         senha: senhaCriptografada,
-        funcoes,
+        cargo,    
+        funcoes,  
       }
     });
   },
 
-  // 2. LISTAGEM GERAL: Alinhada perfeitamente com a tela "LISTA DE DIRETOR"
+  // 2. LISTAGEM: Busca direto do banco usando as colunas novas
   async listarTodos() {
     const diretores = await prisma.diretor.findMany({
       select: {
         id: true,
         nome: true,
         rga: true,
-        funcoes: true,
+        cargo: true,    
+        funcoes: true,  
       },
       orderBy: { nome: "asc" }
     });
@@ -93,12 +102,12 @@ const DiretorModel = {
       id: diretor.id,
       nome: diretor.nome,
       rga: diretor.rga,
-      funcao: diretor.funcoes[0] || '',
-      stacks: diretor.funcoes,
+      funcao: diretor.cargo || 'Não Definido', 
+      stacks: diretor.funcoes,                
     }));
   },
 
-  // 3. BUSCA INDIVIDUAL (inf. admin): Traz o RGA, as tags de Função e os Projetos Aceitos!
+  // 3. BUSCA INDIVIDUAL: Traz as alocações reais do banco de dados
   async buscarPorId(id) {
     if (!id) throw new Error('O ID do diretor é obrigatório.');
 
@@ -119,8 +128,10 @@ const DiretorModel = {
       id: diretor.id,
       nome: diretor.nome,
       rga: diretor.rga,
-      funcao: diretor.funcoes[0] || '',
-      stacks: diretor.funcoes,
+      email: diretor.email,
+      login: diretor.login,
+      funcao: diretor.cargo || '', 
+      stacks: diretor.funcoes,     
       projetosAceitos: diretor.alocacoes.map((aloc) => ({
         projetoId: aloc.projeto.id,
         nome: aloc.projeto.nome
@@ -128,7 +139,7 @@ const DiretorModel = {
     };
   },
 
-  // 4. ATUALIZAÇÃO (EDITAR): Atende ao botão de editar (lápis) da lista
+  // 4. ATUALIZAÇÃO (EDITAR): Atualiza o Supabase real
   async atualizar(id, dados) {
     if (!id) throw new Error('O ID do diretor é obrigatório para atualização.');
 
@@ -139,13 +150,16 @@ const DiretorModel = {
     const rga = dados.rga || diretorAtual.rga;
     const email = dados.email || diretorAtual.email;
     const login = dados.login || diretorAtual.login;
-    const funcoes = normalizarFuncoes(dados);
+    
+    const cargo = dados.funcao || dados.cargo || diretorAtual.cargo;
+    const funcoes = dados.stacks || normalizarFuncoes(dados);
 
     const dadosAtualizados = {
       nome,
       rga,
       email,
       login,
+      cargo,
       funcoes: funcoes.length ? funcoes : diretorAtual.funcoes
     };
 
@@ -159,7 +173,7 @@ const DiretorModel = {
     });
   },
 
-  // 5. REMOÇÃO (DELETAR): Atende ao botão de lixeira da lista
+  // 5. REMOÇÃO (DELETAR)
   async deletar(id) {
     if (!id) throw new Error("O ID do diretor é obrigatório para exclusão.");
 
@@ -168,7 +182,7 @@ const DiretorModel = {
     });
   },
 
-  // 6. AUTENTICAÇÃO: Lógica auxiliar para a tela de Login que criamos antes
+  // 6. AUTENTICAÇÃO
   async verificarCredenciais(login, senha) {
     const diretor = await prisma.diretor.findUnique({ where: { login } });
     if (!diretor) return null;

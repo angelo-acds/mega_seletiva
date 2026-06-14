@@ -58,14 +58,15 @@ model Alocacao {
 
 // 4. Módulo de Diretor / Administrador
 model Diretor {
-  id        String     @id @default(uuid())
+  id        String   @id @default(uuid())
   nome      String
-  rga       String     @unique // Adicionado @unique para validação correta do banco
-  email     String     @unique // Adicionado @unique para validação correta do banco
-  login     String     @unique
+  rga       String   @unique
+  email     String   @unique
+  login     String   @unique
   senha     String
-  funcoes   String[]   
-  createdAt DateTime   @default(now()) // Corrigido a sintaxe que estava com '// ...'
+  cargo     String?  // <--- ADICIONE A INTERROGAÇÃO AQUI (Torna o campo opcional no banco)
+  funcoes   String[] 
+  createdAt DateTime @default(now())
 
   alocacoes Alocacao[] 
 }

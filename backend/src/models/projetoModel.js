@@ -21,7 +21,7 @@ const ProjetoModel = {
     }));
   },
 
-  // 2. CADASTRO COMPLETO: Cria o projeto e faz a alocação inicial transacional
+  // 2. CADASTRO COMPLETO: Identifica inteligentemente se é Diretor ou Membro comum
   async criar(dados) {
     const { nome, descricao, status = "Criado", dataLimite, alocacoes } = dados;
 
@@ -40,11 +40,18 @@ const ProjetoModel = {
       });
 
       if (alocacoes && Array.isArray(alocacoes) && alocacoes.length > 0) {
-        const dadosAlocacao = alocacoes.map(aloc => ({
-          projetoId: novoProjeto.id,
-          membroId: aloc.membroId,
-          funcaoNoProjeto: aloc.funcaoNoProjeto
-        }));
+        const dadosAlocacao = alocacoes.map(aloc => {
+          // Se a função for Gerente de Projeto ou Supervisor, tratamos como Diretor
+          const ehDiretor = aloc.funcaoNoProjeto === "Gerente de Projeto" || aloc.funcaoNoProjeto === "Supervisor";
+          
+          return {
+            projetoId: novoProjeto.id,
+            funcaoNoProjeto: aloc.funcaoNoProjeto,
+            // Preenche a coluna correta baseada no cargo para não salvar nulo no banco!
+            diretorId: ehDiretor ? (aloc.membroId || aloc.diretorId) : null,
+            membroId: !ehDiretor ? (aloc.membroId || aloc.id) : null
+          };
+        });
 
         await tx.alocacao.createMany({
           data: dadosAlocacao
@@ -55,7 +62,7 @@ const ProjetoModel = {
     });
   },
 
-  // 3. BUSCA INDIVIDUAL DETALHADA: Crucial para renderizar a tela "inf. projeto"!
+  // 3. BUSCA INDIVIDUAL: Faz o include do Diretor para que ele apareça na tela!
   async buscarPorId(id) {
     if (!id) throw new Error("O ID do projeto é obrigatório.");
 
@@ -66,6 +73,9 @@ const ProjetoModel = {
           include: {
             membro: {
               select: { id: true, name: true }
+            },
+            diretor: {
+              select: { id: true, nome: true } // Traz o nome do Diretor alocado!
             }
           }
         }
@@ -76,22 +86,29 @@ const ProjetoModel = {
       throw new Error("Projeto não encontrado.");
     }
 
+    // Normaliza os nomes das chaves para bater com o que o Front-end espera
     const equipes = {
       "Back-End": [],
       "Front-End": [],
       "Designer": [],
       "Data Base": [],
       "Mobile": [],
+      "Gerente de Projeto": [], // Adicionado para bater com a função real
       "Supervisor": []
     };
 
     projeto.alocacoes.forEach((aloc) => {
       const funcao = aloc.funcaoNoProjeto;
+      
+      // Pega o nome do Membro ou o nome do Diretor dependendo de quem está preenchido
+      const nomeAlocado = aloc.membro?.name || aloc.diretor?.nome || "Não identificado";
+      const idAlocado = aloc.membroId || aloc.diretorId;
+
       if (equipes[funcao]) {
         equipes[funcao].push({
           alocacaoId: aloc.id,
-          membroId: aloc.membroId,
-          nome: aloc.membro?.name || null,
+          membroId: idAlocado,
+          nome: nomeAlocado,
         });
       }
     });
@@ -105,14 +122,14 @@ const ProjetoModel = {
       equipes,
       alocacoes: projeto.alocacoes.map((aloc) => ({
         id: aloc.id,
-        membroId: aloc.membroId,
-        nome: aloc.membro?.name || null,
+        membroId: aloc.membroId || aloc.diretorId,
+        nome: aloc.membro?.name || aloc.diretor?.nome || null,
         funcaoNoProjeto: aloc.funcaoNoProjeto,
       })),
     };
   },
 
-  // 4. ATUALIZAÇÃO (EDITAR): Atende ao botão "Salvar" e edição de membros da tela
+  // 4. ATUALIZAÇÃO (EDITAR): Atualiza dados do projeto
   async atualizar(id, dados) {
     const { nome, descricao, status, dataLimite } = dados;
 
@@ -129,12 +146,9 @@ const ProjetoModel = {
     });
   },
 
-  // 5. REMOÇÃO (DELETAR): Completa o ciclo do CRUD exigido pelo edital
+  // 5. REMOÇÃO (DELETAR)
   async deletar(id) {
     if (!id) throw new Error("O ID do projeto é obrigatório para exclusão.");
-
-    // Como colocamos "onDelete: Cascade" no schema.prisma, as alocações deste projeto
-    // serão deletadas automaticamente pelo banco! Segurança e elegância.
     return await prisma.projeto.delete({
       where: { id }
     });

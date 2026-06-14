@@ -30,18 +30,25 @@ function CadastroAdmin() {
 
   async function carregarDiretor() {
     try {
-      const { data: diretor } = await diretoresService.buscar(id)
+      const resposta = await diretoresService.buscar(id)
+      
+      // Garante a captura dos dados tanto se vier direto em resposta.data quanto em resposta.data.dados
+      const diretor = resposta.data?.dados || resposta.data || resposta;
+      
       if (diretor) {
         setForm({
-          nome: diretor.nome,
-          rga: diretor.rga,
-          funcao: diretor.funcao,
-          stacks: diretor.stacks || [],
+          nome: diretor.nome || '',
+          rga: diretor.rga || '',
+          // Se o back mandar 'funcao' ele lê, se mandar 'cargo' serve de fallback
+          funcao: diretor.funcao || diretor.cargo || 'Diretor de Projetos',
+          // Mapeia corretamente as stacks técnicas ou o array antigo 'funcoes'
+          stacks: diretor.stacks || diretor.funcoes || [],
           senha: '',
         })
       }
     } catch (err) {
       console.error('Erro ao carregar diretor:', err)
+      setErro('Não foi possível carregar os dados do diretor para edição.')
     }
   }
 
