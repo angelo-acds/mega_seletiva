@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { TbPlus, TbPencil, TbTrash, TbSearch, TbCheck, TbAlertTriangle, TbX } from 'react-icons/tb'
 import PageLayout from '../components/PageLayout'
 import { membrosService } from '../services/api'
-import { loadData, saveData, defaultProjetos } from '../services/localData'
 import './ListPage.css'
 
 const FUNCAO_COR = {
@@ -18,7 +17,6 @@ const FUNCAO_COR = {
 function Membros() {
   const navigate = useNavigate()
   const [membros, setMembros] = useState([])
-  const [totalProjetos, setTotalProjetos] = useState(0)
   const [busca, setBusca] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -28,29 +26,19 @@ function Membros() {
     setLoading(true)
     try {
       const { data } = await membrosService.listar()
-      const projetosData = loadData('projetos', defaultProjetos)
-      setTotalProjetos(projetosData.length || 0)
+      
+      // Mapeia garantindo o preenchimento correto das propriedades vindas do back-end
+      const normalizados = data.map((m) => ({
+        id: m.id,
+        nome: m.nome || m.name,
+        rga: m.rga,
+        funcao: m.funcao || 'Membro',
+        stacks: m.stacks || m.funcoes || [],
+        // Coleta o número real enviado de forma segura pelo back-end
+        projetosCount: m.projetos !== undefined ? m.projetos : (m.totalProjetos || 0)
+      }))
 
-      const counts = {}
-      projetosData.forEach((p) => {
-        const seen = new Set()
-        const aloc = p.alocacao || {}
-        Object.values(aloc).forEach((v) => {
-          if (Array.isArray(v)) {
-            v.forEach((mid) => {
-              if (mid) seen.add(Number(mid))
-            })
-          } else if (v) {
-            seen.add(Number(v))
-          }
-        })
-        seen.forEach((mid) => {
-          counts[mid] = (counts[mid] || 0) + 1
-        })
-      })
-
-      const updated = data.map((m) => ({ ...m, projetos: counts[m.id] || 0 }))
-      setMembros(updated)
+      setMembros(normalizados)
     } catch (err) {
       console.error('Erro ao carregar membros:', err)
       alert('Não foi possível carregar os membros do servidor.')
@@ -60,18 +48,18 @@ function Membros() {
   }
 
   const renderCargaBadge = (count) => {
-    const total = totalProjetos || 0
-    const percent = total === 0 ? 0 : (count / total) * 100
+    // Escala visual baseada no número absoluto de alocações ativas do desenvolvedor
     let color = '#10B981'
     let Icon = TbCheck
-    if (percent <= 33) {
-      color = '#10B981'
+
+    if (count <= 1) {
+      color = '#10B981' // Verde: Carga tranquila ou livre
       Icon = TbCheck
-    } else if (percent < 66) {
-      color = '#F59E0B'
+    } else if (count === 2) {
+      color = '#F59E0B' // Amarelo: Carga moderada (2 projetos)
       Icon = TbAlertTriangle
     } else {
-      color = '#EF4444'
+      color = '#EF4444' // Vermelho: Carga alta/Sobrecarga (3 ou mais projetos)
       Icon = TbX
     }
 
@@ -100,8 +88,8 @@ function Membros() {
   }
 
   const filtrados = membros.filter((m) =>
-    m.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    ((m.stacks && m.stacks.length > 0 ? m.stacks[0] : (m.funcao || '')).toLowerCase()).includes(busca.toLowerCase()) ||
+    (m.nome || '').toLowerCase().includes(busca.toLowerCase()) ||
+    (m.funcao || '').toLowerCase().includes(busca.toLowerCase()) ||
     (m.stacks || []).join(' ').toLowerCase().includes(busca.toLowerCase())
   )
 
@@ -119,7 +107,7 @@ function Membros() {
           <TbSearch size={18} className="busca__icone" />
           <input
             type="text"
-            placeholder="Buscar membro ou função..."
+            placeholder="Buscar membro por nome ou stack..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             className="busca__input"
@@ -163,7 +151,7 @@ function Membros() {
                           ))}
                         </div>
                       </td>
-                      <td>{renderCargaBadge(m.projetos)}</td>
+                      <td>{renderCargaBadge(m.projetosCount)}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="tabela__acoes">
                           <button className="btn-icone btn-icone--editar" onClick={() => navigate(`/membros/${m.id}/editar`)} title="Editar">

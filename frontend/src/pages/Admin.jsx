@@ -49,6 +49,7 @@ function Admin() {
 
   const filtrados = diretores.filter((d) =>
     d.nome.toLowerCase().includes(busca.toLowerCase()) ||
+    (d.funcao || '').toLowerCase().includes(busca.toLowerCase()) ||
     (d.stacks || []).join(' ').toLowerCase().includes(busca.toLowerCase())
   )
 
@@ -66,7 +67,7 @@ function Admin() {
           <TbSearch size={18} className="busca__icone" />
           <input
             type="text"
-            placeholder="Buscar diretor..."
+            placeholder="Buscar diretor por nome, cargo ou stack..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             className="busca__input"
@@ -98,8 +99,9 @@ function Admin() {
                       <td className="tabela__nome">{d.nome}</td>
                       <td>{d.rga}</td>
                       <td>
+                        {/* CORREÇÃO AQUI: Mostra o cargo real enviado pelo back-end */}
                         <span className="badge" style={{ background: 'rgba(167,139,250,0.15)', color: 'var(--roxo-claro)' }}>
-                          {(d.stacks && d.stacks.length > 0) ? d.stacks[0] : d.funcao}
+                          {d.funcao || 'Não Definido'}
                         </span>
                       </td>
                       <td>

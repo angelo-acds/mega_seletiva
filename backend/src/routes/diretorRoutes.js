@@ -59,10 +59,18 @@ router.get("/:id", async (req, res) => {
 // POST http://localhost:8080/diretores
 router.post("/", async (req, res) => {
   try {
-    const novoDiretor = await DiretorModel.criar(req.body);
+    const d = await DiretorModel.criar(req.body);
+    
+    // Devolve o JSON mapeado exatamente como o front-end espera ler na resposta
     return res.status(201).json({
       message: "Diretor cadastrado com sucesso!",
-      dados: novoDiretor
+      dados: {
+        id: d.id,
+        nome: d.nome,
+        rga: d.rga,
+        funcao: d.cargo,  // <-- Mapeado para sumir o bug visual do front
+        stacks: d.funcoes // <-- Mapeado para as tags roxas
+      }
     });
   } catch (error) {
     return res.status(400).json({ error: error.message });
@@ -74,10 +82,18 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const diretorAtualizado = await DiretorModel.atualizar(id, req.body);
+    const d = await DiretorModel.atualizar(id, req.body);
+    
+    // Devolve o JSON mapeado pós-edição para o front atualizar a linha da tabela na hora
     return res.status(200).json({
-      message: "Dados do diretor atualizados com sucesso!",
-      dados: diretorAtualizado
+      message: "Dados do diretor updated com sucesso!",
+      dados: {
+        id: d.id,
+        nome: d.nome,
+        rga: d.rga,
+        funcao: d.cargo,  // <-- Mapeado para o front receber o valor atualizado
+        stacks: d.funcoes // <-- Mapeado para as tags roxas
+      }
     });
   } catch (error) {
     return res.status(400).json({ error: error.message });
